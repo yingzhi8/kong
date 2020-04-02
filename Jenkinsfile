@@ -1,8 +1,5 @@
 pipeline {
     agent none
-    triggers {
-        cron(env.BRANCH_NAME == 'master' | env.BRANCH_NAME == 'next' ? '@daily' : '')
-    }
     options {
         retry(1)
         timeout(time: 2, unit: 'HOURS')
@@ -37,7 +34,7 @@ pipeline {
                         AWS_ACCESS_KEY = credentials('AWS_ACCESS_KEY')
                         AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
                         DOCKER_MACHINE_ARM64_NAME = "jenkins-kong-${env.BUILD_NUMBER}"
-                        REPOSITORY_OS_NAME = "${env.BRANCH_NAME}"
+                        REPOSITORY_OS_NAME = "master"
                         KONG_PACKAGE_NAME = "kong-master"
                         DEBUG = 0
                     }
@@ -67,7 +64,7 @@ pipeline {
                         KONG_BUILD_TOOLS_LOCATION = "${env.WORKSPACE}/../kong-build-tools"
                         BINTRAY_USR = 'kong-inc_travis-ci@kong'
                         BINTRAY_KEY = credentials('bintray_travis_key')
-                        REPOSITORY_OS_NAME = "${env.BRANCH_NAME}"
+                        REPOSITORY_OS_NAME = "master"
                         KONG_PACKAGE_NAME = "kong-master"
                         DEBUG = 0
                     }
@@ -93,7 +90,7 @@ pipeline {
                         BINTRAY_KEY = credentials('bintray_travis_key')
                         PRIVATE_KEY_FILE = credentials('kong.private.gpg-key.asc')
                         PRIVATE_KEY_PASSPHRASE = credentials('kong.private.gpg-key.asc.password')
-                        REPOSITORY_OS_NAME = "${env.BRANCH_NAME}"
+                        REPOSITORY_OS_NAME = "master"
                         KONG_PACKAGE_NAME = "kong-master"
                         DEBUG = 0
                     }
@@ -125,7 +122,7 @@ pipeline {
                         BINTRAY_KEY = credentials('bintray_travis_key')
                         PRIVATE_KEY_FILE = credentials('kong.private.gpg-key.asc')
                         PRIVATE_KEY_PASSPHRASE = credentials('kong.private.gpg-key.asc.password')
-                        REPOSITORY_OS_NAME = "${env.BRANCH_NAME}"
+                        REPOSITORY_OS_NAME = "master"
                         KONG_PACKAGE_NAME = "kong-master"
                         DEBUG = 0
                     }
@@ -151,7 +148,7 @@ pipeline {
                         KONG_BUILD_TOOLS_LOCATION = "${env.WORKSPACE}/../kong-build-tools"
                         BINTRAY_USR = 'kong-inc_travis-ci@kong'
                         BINTRAY_KEY = credentials('bintray_travis_key')
-                        REPOSITORY_OS_NAME = "${env.BRANCH_NAME}"
+                        REPOSITORY_OS_NAME = "master"
                         KONG_PACKAGE_NAME = "kong-master"
                         DEBUG = 0
                     }
