@@ -24,7 +24,7 @@ describe("Admin API #off", function()
   lazy_setup(function()
     assert(helpers.start_kong({
       database = "off",
-      mem_cache_size = "10m",
+      mem_cache_size = "15m",
       stream_listen = "127.0.0.1:9011",
       nginx_conf = "spec/fixtures/custom_nginx.template",
     }))
@@ -772,7 +772,7 @@ describe("Admin API (concurrency tests) #off", function()
     assert(helpers.start_kong({
       database = "off",
       nginx_worker_processes = 8,
-      mem_cache_size = "10m",
+      mem_cache_size = "15m",
     }))
 
     client = assert(helpers.admin_client())
@@ -895,7 +895,7 @@ describe("Admin API #off with Unique Foreign #unique", function()
       database = "off",
       plugins = "unique-foreign",
       nginx_worker_processes = 1,
-      mem_cache_size = "10m",
+      mem_cache_size = "15m",
     }))
   end)
 
