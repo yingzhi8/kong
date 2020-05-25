@@ -78,6 +78,20 @@ function Config:parse_file(filename, accept, old_hash)
 end
 
 
+local function convert_yaml_nulls(tbl)
+  for k,v in pairs(tbl) do
+    if v == lyaml.null then
+      tbl[k] = null
+
+    elseif type(v) == "table" then
+      tbl[k] = convert_yaml_nulls(v)
+    end
+  end
+
+  return tbl
+end
+
+
 function Config:parse_string(contents, filename, accept, old_hash)
   -- we don't care about the strength of the hash
   -- because declarative config is only loaded by Kong administrators,
@@ -98,6 +112,10 @@ function Config:parse_string(contents, filename, accept, old_hash)
     if not pok then
       err = dc_table
       dc_table = nil
+    end
+
+    if type(dc_table) == "table" then
+      convert_yaml_nulls(dc_table)
     end
 
   elseif accept.json and filename:match("json$") then
