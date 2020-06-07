@@ -464,6 +464,14 @@ local get_plugin do
     return assert(msgpack.unpack(d))
   end
 
+  local function phase_name(name)
+    if name == 'header_filter' or name == 'body_filter' then
+      return "fake_"..name
+    end
+
+    return name
+  end
+
   function get_plugin(plugin_name)
     local plugin = loaded_plugins[plugin_name]
     if plugin and plugin.PRIORITY then
@@ -494,13 +502,28 @@ local get_plugin do
         end
 
       else
-        plugin[phase] = function(self, conf)
+        plugin[phase_name(phase)] = function(self, conf)
           local instance_id = get_instance(plugin_name, conf)
           local _, err = bridge_loop(instance_id, phase)
           if err and string.match(err, "No plugin instance") then
             instance_id = reset_and_get_instance(plugin_name, conf)
             bridge_loop(instance_id, phase)
           end
+        end
+      end
+    end
+
+    if plugin.fake_header_filter or plugin.fake_body_filter then
+      if plugin.access then
+        plugin.access = function(self, conf)
+          kong.service.request.enable_buffering()
+          local instance_id = get_instance(plugin_name, conf)
+          bridge_loop(instance_id, 'access')
+        end
+
+      else
+        plugin.access = function(self, conf)
+          kong.service.request.enable_buffering()
         end
       end
     end

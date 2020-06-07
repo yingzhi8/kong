@@ -817,6 +817,11 @@ local function new(self, major_version)
         self.ctx.core.buffered_headers = headers
         self.ctx.core.buffered_body = body
 
+        local handlers = package.loaded.kong
+
+        handlers.header_filter(true)
+        handlers.body_filter(true)
+
       else
         ctx.KONG_EXITED = true
       end

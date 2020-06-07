@@ -308,6 +308,8 @@ local function new_ws_data()
       certificate   = {},
       rewrite       = {},
       access        = {},
+      fake_header_filter = {},
+      fake_body_filter   = {},
       header_filter = {},
       body_filter   = {},
       log           = {},
