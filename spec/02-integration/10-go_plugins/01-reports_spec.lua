@@ -132,7 +132,7 @@ for _, strategy in helpers.each_strategy() do
       proxy_client:close()
     end)
 
-    it("runs fake header_filter phase", function()
+    it("runs fake 'response' phase", function()
       local proxy_client = assert(helpers.proxy_client())
       local res = proxy_client:get("/", {
         headers = { host  = "http-service.test" }

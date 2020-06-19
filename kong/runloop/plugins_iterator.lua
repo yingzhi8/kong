@@ -243,6 +243,11 @@ local function get_next(self)
       local cfg = load_configuration_through_combos(ctx, combos, plugin)
       if cfg then
         plugins[name] = cfg
+
+        if plugin.handler.response then
+          -- there's a "response" handler for this request, make it buffered
+          kong.ctx.core.buffered_proxying = true
+        end
       end
     end
   end
@@ -308,8 +313,7 @@ local function new_ws_data()
       certificate   = {},
       rewrite       = {},
       access        = {},
-      fake_header_filter = {},
-      fake_body_filter   = {},
+      response      = {},
       header_filter = {},
       body_filter   = {},
       log           = {},

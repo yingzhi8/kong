@@ -30,7 +30,7 @@ func (conf Config) Access(kong *pdk.PDK) {
 }
 
 
-func (conf Config) HeaderFilter(kong *pdk.PDK) {
+func (conf Config) Response(kong *pdk.PDK) {
   srvr, err := kong.ServiceResponse.GetHeader("Server")
   if err != nil {
     kong.Log.Err(err.Error())

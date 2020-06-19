@@ -345,47 +345,6 @@ local function list_migrations(migtable)
 end
 
 
-local buffered_proxy
-do
-  local HTTP_METHODS = {
-    GET       = ngx.HTTP_GET,
-    HEAD      = ngx.HTTP_HEAD,
-    PUT       = ngx.HTTP_PUT,
-    POST      = ngx.HTTP_POST,
-    DELETE    = ngx.HTTP_DELETE,
-    OPTIONS   = ngx.HTTP_OPTIONS,
-    MKCOL     = ngx.HTTP_MKCOL,
-    COPY      = ngx.HTTP_COPY,
-    MOVE      = ngx.HTTP_MOVE,
-    PROPFIND  = ngx.HTTP_PROPFIND,
-    PROPPATCH = ngx.HTTP_PROPPATCH,
-    LOCK      = ngx.HTTP_LOCK,
-    UNLOCK    = ngx.HTTP_UNLOCK,
-    PATCH     = ngx.HTTP_PATCH,
-    TRACE     = ngx.HTTP_TRACE,
-  }
-
-  buffered_proxy = function(ctx)
-    ngx.req.read_body()
-
-    local options = {
-      always_forward_body = true,
-      share_all_vars      = true,
-      method              = HTTP_METHODS[ngx.req.get_method()],
-      ctx                 = ctx,
-    }
-
-    local res = ngx.location.capture("/kong_buffered_http", options)
-    if res.truncated then
-      ngx.status = 502
-      return kong_error_handlers(ngx)
-    end
-
-    return kong.response.exit(res.status, res.body, res.header)
-  end
-end
-
-
 -- Kong public context handlers.
 -- @section kong_handlers
 
@@ -766,8 +725,120 @@ function Kong.access()
   -- we intent to proxy, though balancer may fail on that
   ctx.KONG_PROXIED = true
 
-  if kong.ctx.core.buffered_proxying then
-    return buffered_proxy(ctx)
+  return Kong.response()
+end
+
+do
+  local HTTP_METHODS = {
+    GET       = ngx.HTTP_GET,
+    HEAD      = ngx.HTTP_HEAD,
+    PUT       = ngx.HTTP_PUT,
+    POST      = ngx.HTTP_POST,
+    DELETE    = ngx.HTTP_DELETE,
+    OPTIONS   = ngx.HTTP_OPTIONS,
+    MKCOL     = ngx.HTTP_MKCOL,
+    COPY      = ngx.HTTP_COPY,
+    MOVE      = ngx.HTTP_MOVE,
+    PROPFIND  = ngx.HTTP_PROPFIND,
+    PROPPATCH = ngx.HTTP_PROPPATCH,
+    LOCK      = ngx.HTTP_LOCK,
+    UNLOCK    = ngx.HTTP_UNLOCK,
+    PATCH     = ngx.HTTP_PATCH,
+    TRACE     = ngx.HTTP_TRACE,
+  }
+
+  function Kong.response()
+    if not kong.ctx.core.buffered_proxying then
+      return
+    end
+
+
+    -- from buffered_proxy
+
+    local ctx = ngx.ctx
+    ngx.req.read_body()
+
+    local options = {
+      always_forward_body = true,
+      share_all_vars      = true,
+      method              = HTTP_METHODS[ngx.req.get_method()],
+      ctx                 = ctx,
+    }
+
+    local res = ngx.location.capture("/kong_buffered_http", options)
+    if res.truncated then
+      ngx.status = 502
+      return kong_error_handlers(ngx)
+    end
+
+
+    -- from response.exit
+    local core = kong.ctx.core
+    core.buffered_status = res.status
+    core.buffered_headers = res.header
+    core.buffered_body = res.body
+
+
+    -- from header_filter (s/HEADER_FILTER/BUFFERED_RESPONSE/)
+
+    if not ctx.KONG_PROCESSING_START then
+      ctx.KONG_PROCESSING_START = ngx.req.start_time() * 1000
+    end
+
+    if not ctx.workspace then
+      ctx.workspace = kong.default_workspace
+    end
+
+    if not ctx.KONG_BUFFERED_RESPONSE_START then
+      ctx.KONG_BUFFERED_RESPONSE_START = get_now_ms()
+
+      if ctx.KONG_REWRITE_START and not ctx.KONG_REWRITE_ENDED_AT then
+        ctx.KONG_REWRITE_ENDED_AT = ctx.KONG_BALANCER_START or
+                                    ctx.KONG_ACCESS_START or
+                                    ctx.KONG_HEADER_FILTER_START
+        ctx.KONG_REWRITE_TIME = ctx.KONG_REWRITE_ENDED_AT -
+                                ctx.KONG_REWRITE_START
+      end
+
+      if ctx.KONG_ACCESS_START and not ctx.KONG_ACCESS_ENDED_AT then
+        ctx.KONG_ACCESS_ENDED_AT = ctx.KONG_BALANCER_START or
+                                  ctx.KONG_HEADER_FILTER_START
+        ctx.KONG_ACCESS_TIME = ctx.KONG_ACCESS_ENDED_AT -
+                              ctx.KONG_ACCESS_START
+      end
+
+      if ctx.KONG_BALANCER_START and not ctx.KONG_BALANCER_ENDED_AT then
+        ctx.KONG_BALANCER_ENDED_AT = ctx.KONG_HEADER_FILTER_START
+        ctx.KONG_BALANCER_TIME = ctx.KONG_BALANCER_ENDED_AT -
+                                ctx.KONG_BALANCER_START
+      end
+    end
+
+    if ctx.KONG_PROXIED then
+      ctx.KONG_WAITING_TIME = ctx.KONG_BUFFERED_RESPONSE_START -
+                            (ctx.KONG_BALANCER_ENDED_AT or ctx.KONG_ACCESS_ENDED_AT)
+
+      if not ctx.KONG_PROXY_LATENCY then
+        ctx.KONG_PROXY_LATENCY = ctx.KONG_BUFFERED_RESPONSE_START - ctx.KONG_PROCESSING_START
+      end
+
+    elseif not ctx.KONG_RESPONSE_LATENCY then
+      ctx.KONG_RESPONSE_LATENCY = ctx.KONG_BUFFERED_RESPONSE_START - ctx.KONG_PROCESSING_START
+    end
+
+    kong_global.set_phase(kong, PHASES.response)
+
+    runloop.response.before(ctx)
+    local plugins_iterator = runloop.get_plugins_iterator()
+    execute_plugins_iterator(plugins_iterator, "response", ctx)
+    runloop.response.after(ctx)
+
+    ctx.KONG_BUFFERED_RESPONSE_ENDED_AT = get_now_ms()
+    ctx.KONG_BUFFERED_RESPONSE_TIME = ctx.KONG_BUFFERED_RESPONSE_ENDED_AT - ctx.KONG_BUFFERED_RESPONSE_START
+
+
+    -- from buffered_proxy
+    return kong.response.exit(res.status, res.body, res.header)
   end
 end
 
@@ -934,7 +1005,7 @@ function Kong.balancer()
 end
 
 
-function Kong.header_filter(fake)
+function Kong.header_filter()
   local ctx = ngx.ctx
   if not ctx.KONG_PROCESSING_START then
     ctx.KONG_PROCESSING_START = ngx.req.start_time() * 1000
@@ -985,11 +1056,7 @@ function Kong.header_filter(fake)
 
   runloop.header_filter.before(ctx)
   local plugins_iterator = runloop.get_plugins_iterator()
-  if fake then
-    execute_plugins_iterator(plugins_iterator, "fake_header_filter", ctx)
-  else
-    execute_plugins_iterator(plugins_iterator, "header_filter", ctx)
-  end
+  execute_plugins_iterator(plugins_iterator, "header_filter", ctx)
   runloop.header_filter.after(ctx)
 
   ctx.KONG_HEADER_FILTER_ENDED_AT = get_now_ms()
@@ -997,7 +1064,7 @@ function Kong.header_filter(fake)
 end
 
 
-function Kong.body_filter(fake)
+function Kong.body_filter()
   local ctx = ngx.ctx
   if not ctx.KONG_BODY_FILTER_START then
     ctx.KONG_BODY_FILTER_START = get_now_ms()
@@ -1035,19 +1102,15 @@ function Kong.body_filter(fake)
 
   kong_global.set_phase(kong, PHASES.body_filter)
 
-  if kong.ctx.core.response_body and not fake then
+  if kong.ctx.core.response_body then
     arg[1] = kong.ctx.core.response_body
     arg[2] = true
   end
 
   local plugins_iterator = runloop.get_plugins_iterator()
-  if fake then
-    execute_plugins_iterator(plugins_iterator, "fake_body_filter", ctx)
-  else
-    execute_plugins_iterator(plugins_iterator, "body_filter", ctx)
-  end
+  execute_plugins_iterator(plugins_iterator, "body_filter", ctx)
 
-  if not fake and not arg[2] then
+  if not arg[2] then
     return
   end
 

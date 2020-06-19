@@ -780,7 +780,7 @@ local function new(self, major_version)
     -- ```
     function _RESPONSE.exit(status, body, headers)
       local is_buffered_exit = self.ctx.core.buffered_proxying
-                           and self.ctx.core.phase == PHASES.balancer
+                           and (self.ctx.core.phase == PHASES.balancer or self.ctx.core.phase == PHASES.response)
                            and ngx.get_phase()     == "access"
 
       if not is_buffered_exit then
@@ -812,17 +812,7 @@ local function new(self, major_version)
 
       local ctx = ngx.ctx
 
-      if is_buffered_exit then
-        self.ctx.core.buffered_status = status
-        self.ctx.core.buffered_headers = headers
-        self.ctx.core.buffered_body = body
-
-        local handlers = package.loaded.kong
-
-        handlers.header_filter(true)
-        handlers.body_filter(true)
-
-      else
+      if not is_buffered_exit then
         ctx.KONG_EXITED = true
       end
 
