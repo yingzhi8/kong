@@ -42,7 +42,8 @@ end
 local PHASES = phase_checker.phases
 
 
-local header_body_log = phase_checker.new(PHASES.header_filter,
+local header_body_log = phase_checker.new(PHASES.response,
+                                          PHASES.header_filter,
                                           PHASES.body_filter,
                                           PHASES.log,
                                           PHASES.error,
@@ -50,6 +51,7 @@ local header_body_log = phase_checker.new(PHASES.header_filter,
 
 local rewrite_access_header = phase_checker.new(PHASES.rewrite,
                                                 PHASES.access,
+                                                PHASES.response,
                                                 PHASES.header_filter,
                                                 PHASES.error,
                                                 PHASES.admin_api)
