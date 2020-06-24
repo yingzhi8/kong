@@ -789,7 +789,7 @@ do
       ctx.workspace = kong.default_workspace
     end
 
-    if not ctx.KONG_BUFFERED_RESPONSE_START then
+    if not ctx.KONG_RESPONSE_START then
       ctx.KONG_BUFFERED_RESPONSE_START = get_now_ms()
 
       if ctx.KONG_REWRITE_START and not ctx.KONG_REWRITE_ENDED_AT then
