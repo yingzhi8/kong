@@ -829,8 +829,8 @@ do
 
     kong_global.set_phase(kong, PHASES.response)
 
-    kong.response.set_status(res.status)
-    kong.response.set_headers(res.header)
+    kong.response.set_status(status)
+    kong.response.set_headers(headers)
 
     runloop.response.before(ctx)
     local plugins_iterator = runloop.get_plugins_iterator()
@@ -840,7 +840,10 @@ do
     ctx.KONG_RESPONSE_ENDED_AT = get_now_ms()
     ctx.KONG_RESPONSE_TIME = ctx.KONG_RESPONSE_ENDED_AT - ctx.KONG_RESPONSE_START
 
-    return kong.response.exit(status, body)
+    -- buffered response
+    ngx.print(body)
+    -- jump over the balancer to header_filter
+    ngx.exit(status)
   end
 end
 
