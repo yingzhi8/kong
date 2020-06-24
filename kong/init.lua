@@ -752,9 +752,7 @@ do
       return
     end
 
-
     -- from buffered_proxy
-
     local ctx = ngx.ctx
     ngx.req.read_body()
 
@@ -771,59 +769,15 @@ do
       return kong_error_handlers(ngx)
     end
 
-
     -- from response.exit
     local core = kong.ctx.core
     core.buffered_status = res.status
     core.buffered_headers = res.header
     core.buffered_body = res.body
 
-
-    -- from header_filter (s/HEADER_FILTER/BUFFERED_RESPONSE/)
-
-    if not ctx.KONG_PROCESSING_START then
-      ctx.KONG_PROCESSING_START = ngx.req.start_time() * 1000
-    end
-
-    if not ctx.workspace then
-      ctx.workspace = kong.default_workspace
-    end
-
+    -- from header_filter (adapted/trimmed)
     if not ctx.KONG_RESPONSE_START then
       ctx.KONG_RESPONSE_START = get_now_ms()
-
-      if ctx.KONG_REWRITE_START and not ctx.KONG_REWRITE_ENDED_AT then
-        ctx.KONG_REWRITE_ENDED_AT = ctx.KONG_BALANCER_START or
-                                    ctx.KONG_ACCESS_START or
-                                    ctx.KONG_HEADER_FILTER_START
-        ctx.KONG_REWRITE_TIME = ctx.KONG_REWRITE_ENDED_AT -
-                                ctx.KONG_REWRITE_START
-      end
-
-      if ctx.KONG_ACCESS_START and not ctx.KONG_ACCESS_ENDED_AT then
-        ctx.KONG_ACCESS_ENDED_AT = ctx.KONG_BALANCER_START or
-                                  ctx.KONG_HEADER_FILTER_START
-        ctx.KONG_ACCESS_TIME = ctx.KONG_ACCESS_ENDED_AT -
-                              ctx.KONG_ACCESS_START
-      end
-
-      if ctx.KONG_BALANCER_START and not ctx.KONG_BALANCER_ENDED_AT then
-        ctx.KONG_BALANCER_ENDED_AT = ctx.KONG_HEADER_FILTER_START
-        ctx.KONG_BALANCER_TIME = ctx.KONG_BALANCER_ENDED_AT -
-                                ctx.KONG_BALANCER_START
-      end
-    end
-
-    if ctx.KONG_PROXIED then
-      ctx.KONG_WAITING_TIME = ctx.KONG_BUFFERED_RESPONSE_START -
-                            (ctx.KONG_BALANCER_ENDED_AT or ctx.KONG_ACCESS_ENDED_AT)
-
-      if not ctx.KONG_PROXY_LATENCY then
-        ctx.KONG_PROXY_LATENCY = ctx.KONG_BUFFERED_RESPONSE_START - ctx.KONG_PROCESSING_START
-      end
-
-    elseif not ctx.KONG_RESPONSE_LATENCY then
-      ctx.KONG_RESPONSE_LATENCY = ctx.KONG_BUFFERED_RESPONSE_START - ctx.KONG_PROCESSING_START
     end
 
     kong_global.set_phase(kong, PHASES.response)
@@ -834,8 +788,7 @@ do
     runloop.response.after(ctx)
 
     ctx.KONG_RESPONSE_ENDED_AT = get_now_ms()
-    ctx.KONG_RESPONSE_TIME = ctx.KONG_BUFFERED_RESPONSE_ENDED_AT - ctx.KONG_RESPONSE_START
-
+    ctx.KONG_RESPONSE_TIME = ctx.KONG_RESPONSE_ENDED_AT - ctx.KONG_RESPONSE_START
 
     -- from buffered_proxy
     return kong.response.exit(res.status, res.body, res.header)
