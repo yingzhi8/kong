@@ -98,7 +98,7 @@ local function is_greater_or_equal_to_ctx_value(ctx, name, greater_name)
     return ok, err
   end
 
-  local ok, err = is_positive_integer(ctx, greater_name)
+  ok, err = is_positive_integer(ctx, greater_name)
   if not ok then
     return ok, err
   end
@@ -117,7 +117,7 @@ local function has_correct_proxy_latency(ctx)
     return ok, err
   end
 
-  local ok, err = is_non_negative_integer(ctx, "KONG_PROXY_LATENCY")
+  ok, err = is_non_negative_integer(ctx, "KONG_PROXY_LATENCY")
   if not ok then
     return ok, err
   end
@@ -143,7 +143,8 @@ end
 
 
 local function has_correct_waiting_time(ctx)
-  local ok, err = is_positive_integer(ctx, "KONG_RESPONSE_START")
+  local err
+  local ok = is_positive_integer(ctx, "KONG_RESPONSE_START")
   if not ok then
     ok, err = is_positive_integer(ctx, "KONG_HEADER_FILTER_START")
     if not ok then
@@ -173,7 +174,7 @@ local function has_correct_receive_time(ctx)
     return ok, err
   end
 
-  local ok, err = is_positive_integer(ctx, "KONG_HEADER_FILTER_START")
+  ok, err = is_positive_integer(ctx, "KONG_HEADER_FILTER_START")
   if not ok then
     return ok, err
   end
