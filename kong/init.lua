@@ -770,10 +770,14 @@ do
       return kong_error_handlers(ngx)
     end
 
+    local status = res.status
+    local headers = res.header
+    local body = res.body
+
     local core = kong.ctx.core
-    core.buffered_status = res.status
-    core.buffered_headers = res.header
-    core.buffered_body = res.body
+    core.buffered_status = status
+    core.buffered_headers = headers
+    core.buffered_body = body
 
     -- fake response phase (this runs after the balancer)
     if not ctx.KONG_PROCESSING_START then
@@ -829,51 +833,14 @@ do
     kong.response.set_headers(res.header)
 
     runloop.response.before(ctx)
-
-    ctx.delay_response = true
-
-    local old_ws = ctx.workspace
     local plugins_iterator = runloop.get_plugins_iterator()
-    for plugin, plugin_conf in plugins_iterator:iterate("response", ctx) do
-      if plugin.handler._go then
-        ctx.ran_go_plugin = true
-      end
-
-      if not ctx.delayed_response then
-        kong_global.set_named_ctx(kong, "plugin", plugin.handler)
-        kong_global.set_namespaced_log(kong, plugin.name)
-
-        local err = coroutine.wrap(plugin.handler.response)(plugin.handler, plugin_conf)
-        if err then
-          kong.log.err(err)
-          ctx.delayed_response = {
-            status_code = 500,
-            content     = { message  = "An unexpected error occurred" },
-          }
-        end
-
-        kong_global.reset_log(kong)
-      end
-
-      ctx.workspace = old_ws
-    end
-
-    if ctx.delayed_response then
-      ctx.KONG_RESPONSE_ENDED_AT = get_now_ms()
-      ctx.KONG_RESPONSE_TIME = ctx.KONG_RESPONSE_ENDED_AT - ctx.KONG_RESPONSE_START
-      ctx.KONG_RESPONSE_LATENCY = ctx.KONG_RESPONSE_ENDED_AT - ctx.KONG_PROCESSING_START
-
-      return flush_delayed_response(ctx)
-    end
-
-    ctx.delay_response = false
-
+    execute_plugins_iterator(plugins_iterator, "response", ctx)
     runloop.response.after(ctx)
 
     ctx.KONG_RESPONSE_ENDED_AT = get_now_ms()
     ctx.KONG_RESPONSE_TIME = ctx.KONG_RESPONSE_ENDED_AT - ctx.KONG_RESPONSE_START
 
-    return kong.response.exit(res.status, res.body)
+    return kong.response.exit(status, body)
   end
 end
 
