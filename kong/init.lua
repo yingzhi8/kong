@@ -825,6 +825,11 @@ do
 
     kong_global.set_phase(kong, PHASES.response)
 
+    kong.response.set_status(res.status)
+    kong.response.set_headers(res.header)
+    --how?
+    --kong.response.set_raw_body(res.body)
+
     runloop.response.before(ctx)
 
     ctx.delay_response = true
