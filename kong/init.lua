@@ -827,8 +827,6 @@ do
 
     kong.response.set_status(res.status)
     kong.response.set_headers(res.header)
-    --how?
-    --kong.response.set_raw_body(res.body)
 
     runloop.response.before(ctx)
 
@@ -875,7 +873,7 @@ do
     ctx.KONG_RESPONSE_ENDED_AT = get_now_ms()
     ctx.KONG_RESPONSE_TIME = ctx.KONG_RESPONSE_ENDED_AT - ctx.KONG_RESPONSE_START
 
-    return kong.response.exit(res.status, res.body, res.header)
+    return kong.response.exit(res.status, res.body)
   end
 end
 
