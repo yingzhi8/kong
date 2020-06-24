@@ -530,7 +530,6 @@ function Kong.init_worker()
 
   runloop.init_worker.before()
 
-
   -- run plugins init_worker context
   ok, err = runloop.update_plugins_iterator()
   if not ok then
@@ -540,6 +539,8 @@ function Kong.init_worker()
 
   local plugins_iterator = runloop.get_plugins_iterator()
   execute_plugins_iterator(plugins_iterator, "init_worker")
+
+  runloop.init_worker.after()
 
   if go.is_on() then
     go.manage_pluginserver()
@@ -600,9 +601,9 @@ function Kong.ssl_certificate()
   ngx.ctx.workspace = kong.default_workspace
 
   runloop.certificate.before(ctx)
-
   local plugins_iterator = runloop.get_updated_plugins_iterator()
   execute_plugins_iterator(plugins_iterator, "certificate", ctx)
+  runloop.certificate.after(ctx)
 end
 
 
@@ -651,6 +652,8 @@ function Kong.rewrite()
 
   ctx.workspace = kong.default_workspace
   execute_plugins_iterator(plugins_iterator, "rewrite", ctx)
+
+  runloop.rewrite.after(ctx)
 
   ctx.KONG_REWRITE_ENDED_AT = get_now_ms()
   ctx.KONG_REWRITE_TIME = ctx.KONG_REWRITE_ENDED_AT - ctx.KONG_REWRITE_START
@@ -1197,6 +1200,7 @@ function Kong.log()
 
   local ctx = ngx.ctx
 
+  runloop.log.before(ctx)
   local plugins_iterator = runloop.get_plugins_iterator()
   execute_plugins_iterator(plugins_iterator, "log", ctx)
   runloop.log.after(ctx)
