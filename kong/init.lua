@@ -780,51 +780,23 @@ do
     core.buffered_body = body
 
     -- fake response phase (this runs after the balancer)
-    if not ctx.KONG_PROCESSING_START then
-      ctx.KONG_PROCESSING_START = ngx.req.start_time() * 1000
-    end
-
-    if not ctx.workspace then
-      ctx.workspace = kong.default_workspace
-    end
-
     if not ctx.KONG_RESPONSE_START then
       ctx.KONG_RESPONSE_START = get_now_ms()
-
-      if ctx.KONG_REWRITE_START and not ctx.KONG_REWRITE_ENDED_AT then
-        ctx.KONG_REWRITE_ENDED_AT = ctx.KONG_BALANCER_START or
-          ctx.KONG_ACCESS_START or
-          ctx.KONG_RESPONSE_START
-        ctx.KONG_REWRITE_TIME = ctx.KONG_REWRITE_ENDED_AT -
-          ctx.KONG_REWRITE_START
-      end
-
-      if ctx.KONG_ACCESS_START and not ctx.KONG_ACCESS_ENDED_AT then
-        ctx.KONG_ACCESS_ENDED_AT = ctx.KONG_BALANCER_START or
-          ctx.KONG_RESPONSE_START
-        ctx.KONG_ACCESS_TIME = ctx.KONG_ACCESS_ENDED_AT -
-          ctx.KONG_ACCESS_START
-      end
 
       if ctx.KONG_BALANCER_START and not ctx.KONG_BALANCER_ENDED_AT then
         ctx.KONG_BALANCER_ENDED_AT = ctx.KONG_RESPONSE_START
         ctx.KONG_BALANCER_TIME = ctx.KONG_BALANCER_ENDED_AT -
-          ctx.KONG_BALANCER_START
+                                 ctx.KONG_BALANCER_START
       end
     end
 
-    if ctx.KONG_PROXIED then
-      if not ctx.KONG_WAITING_TIME then
-        ctx.KONG_WAITING_TIME = ctx.KONG_RESPONSE_START -
-          (ctx.KONG_BALANCER_ENDED_AT or ctx.KONG_ACCESS_ENDED_AT)
-      end
+    if not ctx.KONG_WAITING_TIME then
+      ctx.KONG_WAITING_TIME = ctx.KONG_RESPONSE_START -
+                             (ctx.KONG_BALANCER_ENDED_AT or ctx.KONG_ACCESS_ENDED_AT)
+    end
 
-      if not ctx.KONG_PROXY_LATENCY then
-        ctx.KONG_PROXY_LATENCY = ctx.KONG_RESPONSE_START - ctx.KONG_PROCESSING_START
-      end
-
-    elseif not ctx.KONG_RESPONSE_LATENCY then
-      ctx.KONG_RESPONSE_LATENCY = ctx.KONG_RESPONSE_START - ctx.KONG_PROCESSING_START
+    if not ctx.KONG_PROXY_LATENCY then
+      ctx.KONG_PROXY_LATENCY = ctx.KONG_RESPONSE_START - ctx.KONG_PROCESSING_START
     end
 
     kong_global.set_phase(kong, PHASES.response)
