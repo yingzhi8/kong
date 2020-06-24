@@ -833,8 +833,8 @@ do
     execute_plugins_iterator(plugins_iterator, "response", ctx)
     runloop.response.after(ctx)
 
-    ctx.KONG_BUFFERED_RESPONSE_ENDED_AT = get_now_ms()
-    ctx.KONG_BUFFERED_RESPONSE_TIME = ctx.KONG_BUFFERED_RESPONSE_ENDED_AT - ctx.KONG_BUFFERED_RESPONSE_START
+    ctx.KONG_RESPONSE_ENDED_AT = get_now_ms()
+    ctx.KONG_RESPONSE_TIME = ctx.KONG_BUFFERED_RESPONSE_ENDED_AT - ctx.KONG_RESPONSE_START
 
 
     -- from buffered_proxy
