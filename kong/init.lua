@@ -790,7 +790,7 @@ do
     end
 
     if not ctx.KONG_RESPONSE_START then
-      ctx.KONG_BUFFERED_RESPONSE_START = get_now_ms()
+      ctx.KONG_RESPONSE_START = get_now_ms()
 
       if ctx.KONG_REWRITE_START and not ctx.KONG_REWRITE_ENDED_AT then
         ctx.KONG_REWRITE_ENDED_AT = ctx.KONG_BALANCER_START or
