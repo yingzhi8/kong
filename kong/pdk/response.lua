@@ -783,7 +783,7 @@ local function new(self, major_version)
     function _RESPONSE.exit(status, body, headers)
       local is_buffered_exit = self.ctx.core.buffered_proxying
                            and (self.ctx.core.phase == PHASES.balancer or self.ctx.core.phase == PHASES.response)
-                           and ngx.get_phase()     == "access"
+                           and ngx.get_phase() == "access"
 
       if not is_buffered_exit then
         check_phase(rewrite_access_header)
@@ -962,9 +962,9 @@ local function new(self, major_version)
   --
   -- return kong.response.error(403)
   function _RESPONSE.error(status, message, headers)
-    local is_buffered_exit = self.ctx.core.buffered_proxying
-                         and self.ctx.core.phase == PHASES.balancer
-                         and ngx.get_phase()     == "access"
+      local is_buffered_exit = self.ctx.core.buffered_proxying
+                           and (self.ctx.core.phase == PHASES.balancer or self.ctx.core.phase == PHASES.response)
+                           and ngx.get_phase() == "access"
 
     if not is_buffered_exit then
       check_phase(rewrite_access_header)

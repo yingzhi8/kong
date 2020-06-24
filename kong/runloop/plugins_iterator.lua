@@ -243,11 +243,6 @@ local function get_next(self)
       local cfg = load_configuration_through_combos(ctx, combos, plugin)
       if cfg then
         plugins[name] = cfg
-
-        if plugin.handler.response then
-          -- there's a "response" handler for this request, make it buffered
-          kong.ctx.core.buffered_proxying = true
-        end
       end
     end
   end
