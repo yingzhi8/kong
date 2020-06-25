@@ -752,12 +752,30 @@ do
   }
 
   function Kong.response()
-    if not kong.ctx.core.buffered_proxying then
+    if ngx.req.http_version() >= 2 then
       return
     end
 
-    -- buffered proxying (that also executes the balancer)
+    local plugins_iterator = runloop.get_plugins_iterator()
+
     local ctx = ngx.ctx
+    local buffered_proxying = kong.ctx.core.buffered_proxying
+    if not buffered_proxying then
+      for plugin in plugins_iterator:iterate("response", ctx) do
+        if plugin.handler.response then
+          buffered_proxying = true
+          break
+        end
+      end
+
+      if not buffered_proxying then
+        return
+      end
+
+      kong.ctx.core.buffered_proxying = true
+    end
+
+    -- buffered proxying (that also executes the balancer)
     ngx.req.read_body()
 
     local options = {
@@ -789,13 +807,13 @@ do
       if ctx.KONG_BALANCER_START and not ctx.KONG_BALANCER_ENDED_AT then
         ctx.KONG_BALANCER_ENDED_AT = ctx.KONG_RESPONSE_START
         ctx.KONG_BALANCER_TIME = ctx.KONG_BALANCER_ENDED_AT -
-                                 ctx.KONG_BALANCER_START
+          ctx.KONG_BALANCER_START
       end
     end
 
     if not ctx.KONG_WAITING_TIME then
       ctx.KONG_WAITING_TIME = ctx.KONG_RESPONSE_START -
-                             (ctx.KONG_BALANCER_ENDED_AT or ctx.KONG_ACCESS_ENDED_AT)
+        (ctx.KONG_BALANCER_ENDED_AT or ctx.KONG_ACCESS_ENDED_AT)
     end
 
     if not ctx.KONG_PROXY_LATENCY then
@@ -808,7 +826,6 @@ do
     kong.response.set_headers(headers)
 
     runloop.response.before(ctx)
-    local plugins_iterator = runloop.get_plugins_iterator()
     execute_plugins_iterator(plugins_iterator, "response", ctx)
     runloop.response.after(ctx)
 
