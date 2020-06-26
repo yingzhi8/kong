@@ -653,6 +653,13 @@ return {
             for transmitting a request to the upstream server.
           ]]
         },
+        request_buffering = {
+          description = [[
+            Whether to enable request body buffering or not. With HTTP 1.1, it
+            may make sense to turn this off on services that receive data with
+            chunked transfer encoding.
+          ]]
+        },
         client_certificate = {
           description = [[
             Certificate to be used as client certificate while TLS handshaking

@@ -1357,6 +1357,7 @@ for _, strategy in helpers.each_strategy() do
             write_timeout      = 60000,
             read_timeout       = 60000,
             retries            = 5,
+            request_buffering  = true,
             tags               = ngx.null,
             client_certificate = ngx.null,
             ca_certificates    = ngx.null,
@@ -1402,6 +1403,7 @@ for _, strategy in helpers.each_strategy() do
             write_timeout      = 10000,
             read_timeout       = 10000,
             retries            = 6,
+            request_buffering  = true,
             client_certificate = { id = certificate.id },
             ca_certificates    = { "c67521dd-8393-48fb-8d70-c5e251fb4b4c", },
           }, service)
